@@ -119,4 +119,15 @@ import { Application, Text, TextStyle, Assets, Sprite, Container } from 'pixi.js
             symbol.texture = newSymbol.texture;
         }
     }
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+        reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 50);
+        spinButton.position.set(app.screen.width / 2, app.screen.height - 100);
+        winText.position.set(app.screen.width / 2, app.screen.height - 50);
+    });
+
+    // Call the resize handler initially to set positions correctly
+    app.renderer.resize(window.innerWidth, window.innerHeight);
 })();
