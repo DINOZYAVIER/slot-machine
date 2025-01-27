@@ -33,7 +33,7 @@ const reelBands = [
 ];
 
 // Current symbols on each reel, initialized with the specified values
-const initialSymbols = [
+const currentSymbols = [
     ['hv2', 'lv3', 'lv3'],
     ['hv1', 'lv2', 'lv3'],
     ['lv1', 'hv2', 'lv3'],
@@ -42,11 +42,13 @@ const initialSymbols = [
 ];
 
 let totalWins = 0;
+const app = new Application();
 
 // Function to draw reels
 function drawReels(currentSymbols, reelsContainer, Assets) {
-    const reelWidth = 128;
-    const reelHeight = 128;
+    console.log('draw');
+    const reelWidth = 96;
+    const reelHeight = 96;
     const numCols = 5;
     const numRows = 3;
 
@@ -55,18 +57,21 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
     for (let col = 0; col < numCols; col++) {
         for (let row = 0; row < numRows; row++) {
             const symbol = new Sprite(Assets.get(currentSymbols[col][row]));
-            symbol.scale.set(0.5, 0.5);
+            symbol.scale.set(0.38, 0.38);
             symbol.x = col * reelWidth;
             symbol.y = row * reelHeight;
             reelsContainer.addChild(symbol);
         }
     }
+    reelsContainer.pivot.set((numCols * reelWidth) / 2, (numRows * reelHeight) / 2);
+    reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 150);
+
+    window.dispatchEvent(new Event('resize'));
 }
 
 (async () =>
 {
     // Create a new application
-    const app = new Application({autoStart: true});
     await app.init({ background: '#1099bb', resizeTo: window });
 
     // Append the application canvas to the document body
@@ -105,7 +110,6 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
     
     //Initialize the assets using a manifest file
     await Assets.init({ manifest: './manifest.json'});
-
     await Assets.loadBundle('symbols', (progress) => 
     {
         // Update the loading text with the current progress
@@ -130,26 +134,10 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
     const reelsContainer = new Container();
     gameContainer.addChild(reelsContainer);
 
-    const reelWidth = 128;
-    const reelHeight = 128;
+    const reelWidth = 96;
+    const reelHeight = 96;
     const numCols = 5;
     const numRows = 3;
-
-    // Create and position reels
-    const currentSymbols = initialSymbols;
-    for (let col = 0; col < numCols; col++) {
-        for (let row = 0; row < numRows; row++) {
-            const symbol = new Sprite(Assets.get(currentSymbols[col][row])); // Example: hv1, hv2, etc.  
-            symbol.scale.set(0.5, 0.5);
-            symbol.x = col * reelWidth;
-            symbol.y = row * reelHeight;
-            reelsContainer.addChild(symbol);
-        }
-    }
-
-    // Center the reels container
-    reelsContainer.pivot.set((numCols * reelWidth) / 2, (numRows * reelHeight) / 2);
-    reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 150);
 
     // Create spin button
     const spinButton = new Sprite(Assets.get('button'));
@@ -168,14 +156,12 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
         fontSize: 24,
         fill: '#ffffff'
     });
-    const winText = new Text('Total wins: 0', winTextStyle);
+    const winText = new Text('Total wins: 0\n', winTextStyle);
     winText.anchor.set(0.5);
     winText.x = app.screen.width / 2;
-    winText.y = app.screen.height - 150;
+    winText.y = app.screen.height - 50;
     winText.resolution = 1;
     gameContainer.addChild(winText);
-
-    (winText);
 
      // Spin reels function
      function spinReels() {
@@ -219,16 +205,29 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
 
         winText.text = `Total wins: ${totalWins}\n${winDetails}`;
     }
-    
-
     // Resize handler
-    window.addEventListener('resize', () => {
-        app.renderer.resize(window.innerWidth, window.innerHeight);
-        reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 50);
-        spinButton.position.set(app.screen.width / 2, app.screen.height - 100);
-        winText.position.set(app.screen.width / 2, app.screen.height - 25);
-    });
+    window.addEventListener('resize', () => 
+    {
+        console.log("resize");
+        const scaleX = window.innerWidth / 800; // 800 is the initial width
+        const scaleY = window.innerHeight / 600; // 600 is the initial height
+        const scale = Math.min(scaleX, scaleY);
 
-    // Call the resize handler initially to set positions correctly
-    app.renderer.resize(window.innerWidth, window.innerHeight);
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+
+        // Update positions and scale
+        reelsContainer.scale.set(scale);
+        reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 100 * scale);
+
+        spinButton.scale.set(0.5 * scale);
+        spinButton.position.set(app.screen.width / 2, app.screen.height - 190 * scale);
+
+        winText.scale.set(scale);
+        winText.position.set(app.screen.width / 2, app.screen.height - 60 * scale);
+});
+
+    drawReels(currentSymbols, reelsContainer, Assets);
+
+    // Call the resize handler initially to set positions and scale correctly
+    window.dispatchEvent(new Event('resize'));
 })();
