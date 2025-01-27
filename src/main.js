@@ -42,73 +42,43 @@ const currentSymbols = [
 ];
 
 let totalWins = 0;
+let numCols = 5;
+let numRows = 3;
 const app = new Application();
 
-// Function to draw reels
-function drawReels(currentSymbols, reelsContainer, Assets) {
-    console.log('draw');
-    const reelWidth = 96;
-    const reelHeight = 96;
-    const numCols = 5;
-    const numRows = 3;
+const loadingTextStyle = new TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 36,
+    fontStyle: 'italic',
+    fontWeight: 'bold',
+    stroke: { color: '#4a1850', width: 5, join: 'round' },
+    dropShadow: {
+        color: '#000000',
+        blur: 4,
+        angle: Math.PI / 6,
+        distance: 6,
+    },
+    wordWrap: true,
+    wordWrapWidth: 440,
+});
+const loadingText = new Text({
+    text: 'Loading ...',
+    loadingTextStyle,
+});
 
-    reelsContainer.removeChildren();
+const gameContainer = new Container();
+const reelsContainer = new Container();
 
-    for (let col = 0; col < numCols; col++) {
-        for (let row = 0; row < numRows; row++) {
-            const symbol = new Sprite(Assets.get(currentSymbols[col][row]));
-            symbol.scale.set(0.38, 0.38);
-            symbol.x = col * reelWidth;
-            symbol.y = row * reelHeight;
-            reelsContainer.addChild(symbol);
-        }
-    }
-    reelsContainer.pivot.set((numCols * reelWidth) / 2, (numRows * reelHeight) / 2);
-    reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 150);
+const winTextStyle = new TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 24,
+    fill: '#ffffff'
+});
+const winText = new Text('Total wins: 0\n', winTextStyle);
 
-    window.dispatchEvent(new Event('resize'));
-}
-
-(async () =>
+async function loadAssetsAndShowLoading(loadingText)
 {
-    // Create a new application
-    await app.init({ background: '#1099bb', resizeTo: window });
-
-    // Append the application canvas to the document body
-    document.body.appendChild(app.canvas);
-
-    const loadingTextStyle = new TextStyle({
-        fontFamily: 'Arial',
-        fontSize: 36,
-        fontStyle: 'italic',
-        fontWeight: 'bold',
-        stroke: { color: '#4a1850', width: 5, join: 'round' },
-        dropShadow: {
-            color: '#000000',
-            blur: 4,
-            angle: Math.PI / 6,
-            distance: 6,
-        },
-        wordWrap: true,
-        wordWrapWidth: 440,
-    });
-
-    const loadingText = new Text({
-        text: 'Loading ...',
-        loadingTextStyle,
-    });
-
-    loadingText.x = app.screen.width / 2;
-    loadingText.y = app.screen.height / 2;
-
-    loadingText.pivot.x = loadingText.width / 2;
-    loadingText.pivot.y = loadingText.height / 2;
-
-    loadingText.anchor.set(0.5); 
-
-    app.stage.addChild(loadingText);
-    
-    //Initialize the assets using a manifest file
+    // Initialize the assets using a manifest file
     await Assets.init({ manifest: './manifest.json'});
     await Assets.loadBundle('symbols', (progress) => 
     {
@@ -125,46 +95,75 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
 
     setInterval(1000);
     loadingText.destroy();
+}
 
-    // Create game container
-    const gameContainer = new Container();
-    app.stage.addChild(gameContainer);
+async function setupUI(app) {
+    // Create a new application
+    await app.init({ background: '#1099bb', resizeTo: window });
 
-    // Create reels container
-    const reelsContainer = new Container();
-    gameContainer.addChild(reelsContainer);
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
 
-    const reelWidth = 96;
-    const reelHeight = 96;
-    const numCols = 5;
-    const numRows = 3;
+    loadingText.x = app.screen.width / 2;
+    loadingText.y = app.screen.height / 2;
 
-    // Create spin button
-    const spinButton = new Sprite(Assets.get('button'));
-    spinButton.scale.set(0.5);
-    spinButton.anchor.set(0.5);
-    spinButton.x = app.screen.width / 2;
-    spinButton.y = app.screen.height - 250;
-    spinButton.interactive = true;
-    spinButton.buttonMode = true;
-    spinButton.on('pointerdown', spinReels);
-    gameContainer.addChild(spinButton);
+    loadingText.pivot.x = loadingText.width / 2;
+    loadingText.pivot.y = loadingText.height / 2;
 
-    // Create text area for displaying wins
-    const winTextStyle = new TextStyle({
-        fontFamily: 'Arial',
-        fontSize: 24,
-        fill: '#ffffff'
+    loadingText.anchor.set(0.5); 
+
+    app.stage.addChild(loadingText);
+
+    await loadAssetsAndShowLoading(loadingText);
+
+     // Create game container
+     app.stage.addChild(gameContainer);
+ 
+     // Create reels container
+     gameContainer.addChild(reelsContainer);
+ 
+     // Create spin button
+     const spinButton = new Sprite(Assets.get('button'));
+     spinButton.scale.set(0.5);
+     spinButton.anchor.set(0.5);
+     spinButton.x = app.screen.width / 2;
+     spinButton.y = app.screen.height - 250;
+     spinButton.interactive = true;
+     spinButton.buttonMode = true;
+     spinButton.on('pointerdown', spinReels);
+     gameContainer.addChild(spinButton);
+ 
+     winText.anchor.set(0.5);
+     winText.x = app.screen.width / 2;
+     winText.y = app.screen.height - 50;
+     winText.resolution = 1;
+     gameContainer.addChild(winText);
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+        const scaleX = window.innerWidth / 800; // 800 is the initial width
+        const scaleY = window.innerHeight / 600; // 600 is the initial height
+        const scale = Math.min(scaleX, scaleY);
+
+        app.renderer.resize(window.innerWidth, window.innerHeight);
+
+        // Update positions and scale
+        reelsContainer.scale.set(scale);
+        reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 100 * scale);
+
+        spinButton.scale.set(0.5 * scale);
+        spinButton.position.set(app.screen.width / 2, app.screen.height - 190 * scale);
+
+        winText.scale.set(scale);
+        winText.position.set(app.screen.width / 2, app.screen.height - 60 * scale);
     });
-    const winText = new Text('Total wins: 0\n', winTextStyle);
-    winText.anchor.set(0.5);
-    winText.x = app.screen.width / 2;
-    winText.y = app.screen.height - 50;
-    winText.resolution = 1;
-    gameContainer.addChild(winText);
+    
+    // Call the resize handler initially to set positions and scale correctly
+    window.dispatchEvent(new Event('resize'));
+}
 
-     // Spin reels function
-     function spinReels() {
+    // Spin reels function
+    function spinReels() {
         for (let col = 0; col < numCols; col++) {
             for (let row = 0; row < numRows; row++) {
                 const randomIndex = Math.floor(Math.random() * reelBands[col].length);
@@ -205,29 +204,33 @@ function drawReels(currentSymbols, reelsContainer, Assets) {
 
         winText.text = `Total wins: ${totalWins}\n${winDetails}`;
     }
-    // Resize handler
-    window.addEventListener('resize', () => 
-    {
-        console.log("resize");
-        const scaleX = window.innerWidth / 800; // 800 is the initial width
-        const scaleY = window.innerHeight / 600; // 600 is the initial height
-        const scale = Math.min(scaleX, scaleY);
 
-        app.renderer.resize(window.innerWidth, window.innerHeight);
+// Function to draw reels
+async function drawReels(currentSymbols, reelsContainer, Assets) {
+    const reelWidth = 96;
+    const reelHeight = 96;
+    const numCols = 5;
+    const numRows = 3;
 
-        // Update positions and scale
-        reelsContainer.scale.set(scale);
-        reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 100 * scale);
+    reelsContainer.removeChildren();
 
-        spinButton.scale.set(0.5 * scale);
-        spinButton.position.set(app.screen.width / 2, app.screen.height - 190 * scale);
+    for (let col = 0; col < numCols; col++) {
+        for (let row = 0; row < numRows; row++) {
+            const symbol = new Sprite(Assets.get(currentSymbols[col][row]));
+            symbol.scale.set(0.38, 0.38);
+            symbol.x = col * reelWidth;
+            symbol.y = row * reelHeight;
+            reelsContainer.addChild(symbol);
+        }
+    }
+    reelsContainer.pivot.set((numCols * reelWidth) / 2, (numRows * reelHeight) / 2);
+    reelsContainer.position.set(app.screen.width / 2, app.screen.height / 2 - 150);
 
-        winText.scale.set(scale);
-        winText.position.set(app.screen.width / 2, app.screen.height - 60 * scale);
-});
-
-    drawReels(currentSymbols, reelsContainer, Assets);
-
-    // Call the resize handler initially to set positions and scale correctly
     window.dispatchEvent(new Event('resize'));
+}
+
+(async () =>
+{
+    await setupUI(app);
+    await drawReels(currentSymbols, reelsContainer, Assets);
 })();
