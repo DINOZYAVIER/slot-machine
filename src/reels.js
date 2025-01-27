@@ -1,4 +1,4 @@
-import { Assets, Sprite, Application } from 'pixi.js';
+import { Assets, Sprite } from 'pixi.js';
 
 import { paytable, paylines, reelBands, currentSymbols } from './constants.js';
 import { reelsContainer, winText } from './ui.js';
@@ -20,31 +20,54 @@ export function spinReels() {
         }
     }
     drawReels();
-    calculateWinnings();
+    calculateWinnings(paylines, currentSymbols, numCols, paytable, winText);
 }
 
-// Calculate winnings function
-function calculateWinnings() {
+function getSymbolAtPosition(position, currentSymbols, numCols) {
+    return currentSymbols[position % numCols][Math.floor(position / numCols)];
+}
+
+function countMatchingSymbols(payline, currentSymbols, numCols, countedPositions) {
+    const firstSymbol = getSymbolAtPosition(payline[0], currentSymbols, numCols);
+    let matchCount = 1;
+
+    countedPositions.add(payline[0]);
+
+    for (let i = 1; i < payline.length; i++) {
+        const position = payline[i];
+        const symbol = getSymbolAtPosition(position, currentSymbols, numCols);
+
+        if (!countedPositions.has(position) && symbol === firstSymbol) {
+            matchCount++;
+            countedPositions.add(position);
+        } else {
+            break;
+        }
+    }
+
+    return { firstSymbol, matchCount };
+}
+
+function calculatePaylineWinnings(payline, currentSymbols, numCols, paytable, countedPositions) {
+    const { firstSymbol, matchCount } = countMatchingSymbols(payline, currentSymbols, numCols, countedPositions);
+
+    if (matchCount >= 3) {
+        const payout = paytable[firstSymbol][matchCount - 3];
+        return { firstSymbol, matchCount, payout };
+    }
+
+    return null;
+}
+
+function calculateWinnings(paylines, currentSymbols, numCols, paytable, winText) {
     let winDetails = '';
+    const countedPositions = new Set();
 
     for (let i = 0; i < paylines.length; i++) {
-        const payline = paylines[i];
-        const firstSymbol = currentSymbols[payline[0] % numCols][Math.floor(payline[0] / numCols)];
-        let matchCount = 1;
-
-        for (let j = 1; j < payline.length; j++) {
-            const symbol = currentSymbols[payline[j] % numCols][Math.floor(payline[j] / numCols)];
-            if (symbol === firstSymbol) {
-                matchCount++;
-            } else {
-                break;
-            }
-        }
-
-        if (matchCount >= 3) {
-            const payout = paytable[firstSymbol][matchCount - 3];
-            ++totalWins;
-            winDetails += `- Payline ${i + 1}, ${firstSymbol} x${matchCount}, ${payout}\n`;
+        const winData = calculatePaylineWinnings(paylines[i], currentSymbols, numCols, paytable, countedPositions);
+        if (winData) {
+            totalWins++;
+            winDetails += `- Payline ${i + 1}, ${winData.firstSymbol} x${winData.matchCount}, ${winData.payout}\n`;
         }
     }
 
@@ -55,8 +78,6 @@ function calculateWinnings() {
 export async function drawReels() {
     const reelWidth = 96;
     const reelHeight = 96;
-    const numCols = 5;
-    const numRows = 3;
 
     reelsContainer.removeChildren();
 
